@@ -27,6 +27,6 @@ Designed as a foundation for real-time social platforms, community apps, and lig
 ## ❌ Caution!!!
 
 - The digital wallet is still fake currency
-- Dont trust someone with #DEV the real dev is "KPSB#DEV" ONLY
+- Dont trust someone with #OWNER the real owner "Sbyte#OWNER" ONLY and same as dev or admin cuz im solo dev
 - If you leak your chat yourself, that’s on you — not me
 
