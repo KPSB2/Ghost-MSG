@@ -270,6 +270,13 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .bbar{width:280px;height:2px;background:var(--border);margin-top:16px;overflow:hidden;}
 .bprog{height:100%;background:var(--gold);box-shadow:0 0 7px var(--gold);width:0;animation:bpg 1.3s .3s ease forwards;}
 @keyframes bpg{to{width:100%}}
+.ci-muted{opacity:.45;}
+.mbr-mute{background:none;border:1px solid var(--border);color:var(--gd);font-size:9px;padding:2px 6px;cursor:pointer;font-family:'Share Tech Mono',monospace;}
+.mbr-mute.on{border-color:var(--yel);color:var(--yel);}
+.mbr-block{background:none;border:1px solid #3a0000;color:#ff6666;font-size:9px;padding:2px 6px;cursor:pointer;font-family:'Share Tech Mono',monospace;}
+.mbr-block.on{border-color:var(--red);color:var(--red);}
+.del-btn{background:rgba(255,42,42,.08);border:1px solid var(--red);color:var(--red);font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;padding:7px 12px;cursor:pointer;width:100%;margin-top:8px;}
+#send-err{display:none;background:rgba(255,42,42,.1);border-top:1px solid var(--red);color:var(--red);font-size:11px;padding:4px 14px;text-align:center;}
 *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .firebase-note{font-size:10px;color:var(--gd);text-align:center;padding:10px 20px;border-top:1px solid var(--border);background:rgba(0,20,0,.3);}
 .firebase-note a{color:var(--cyn);text-decoration:none;}
@@ -575,11 +582,13 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
             <button class="mob-back-btn" onclick="mobileBack()">← BACK</button>
             <button class="ibtn" id="mbr-btn" style="display:none" onclick="openMembers()">MEMBERS</button>
             <button class="paybtn" id="pay-btn" onclick="openPay()">◈ SEND</button>
+            <button class="ibtn" id="mute-btn" onclick="toggleCurrentMute()">🔔</button>
             <button class="ibtn" onclick="clearChat()">CLR</button>
             <button class="ibtn" onclick="closeChat()">✕</button>
           </div>
         </div>
         <div class="msgs" id="msgs"></div>
+        <div id="send-err"></div>
         <div class="inarea">
           <div class="inrow">
             <span style="color:var(--gd);font-size:11px">►</span>
@@ -649,13 +658,14 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
     <div class="mtit" style="color:var(--cyn)"><span>// PUBLIC ROOMS</span><button class="mcl" onclick="closeMod('pubmod')">✕</button></div>
     <div class="mbdy" style="padding:0">
       <div id="pub-room-list" style="max-height:240px;overflow-y:auto"></div>
-      <div style="padding:12px 16px;border-top:1px solid var(--border)">
+      <div id="pub-create-sec" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
         <div style="font-size:9px;color:var(--gd);margin-bottom:10px;letter-spacing:1px">// CREATE NEW PUBLIC ROOM</div>
         <div class="fg"><input class="ti" id="pub-name" type="text" placeholder="room_name" maxlength="24" autocomplete="off" spellcheck="false"></div>
         <div class="fg"><input class="ti" id="pub-desc" type="text" placeholder="description (optional)" maxlength="60"></div>
         <button class="tb2-cyn" onclick="doCreatePubRoom()" style="font-size:10px;padding:7px">CREATE PUBLIC ROOM</button>
         <div class="terr" id="puberr"></div>
       </div>
+      <div id="pub-guest-note" style="display:none;padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--gd)">// Register an account to create public rooms</div>
     </div>
   </div>
 </div>
@@ -824,11 +834,25 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
       <!-- dm button for other users -->
       <div id="prof-dm-section" style="display:none;margin-bottom:16px">
         <button class="tb2" id="prof-dm-btn" onclick="dmFromProfile()" style="font-size:10px;padding:8px;letter-spacing:2px">► OPEN DM CHANNEL</button>
+        <button id="prof-block-btn" onclick="toggleBlockProfile()" style="width:100%;margin-top:6px;padding:7px;background:rgba(255,42,42,.06);border:1px solid #3a0000;color:#ff6666;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">BLOCK USER</button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- DELETE GROUP MODAL -->
+<div class="mov" id="delgrpmod">
+  <div class="modal" style="width:360px">
+    <div class="mtit" style="color:var(--red)"><span>⚠ DELETE GROUP</span><button class="mcl" onclick="closeMod('delgrpmod')">✕</button></div>
+    <div class="mbdy">
+      <div style="font-size:11px;color:var(--wht);line-height:1.8;margin-bottom:14px">Permanently deletes this group and all messages. Cannot be undone.</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeMod('delgrpmod')" style="flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">CANCEL</button>
+        <button onclick="confirmDeleteGroup()" style="flex:1;padding:9px;background:rgba(255,42,42,.08);border:1px solid var(--red);color:var(--red);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;font-weight:700">DELETE</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -991,20 +1015,31 @@ let timerIntervals={};
 const _rl={msg:{t:5,l:0,max:5,r:5000},auth:{t:5,l:0,max:5,r:10000}};
 function rateCheck(k){const b=_rl[k],n=Date.now(),d=Math.floor((n-(b.l||n))/b.r);if(d>0){b.t=Math.min(b.max,b.t+d);b.l=n;}if(!b.l)b.l=n;if(b.t<=0)return false;b.t--;return true;}
 
+// ── MUTE / BLOCK ─────────────────────────────────────────────
+function _prefs(){return JSON.parse(localStorage.getItem('gm_prefs')||'{"muted":{},"blocked":{}}');}
+function _savePrefs(p){localStorage.setItem('gm_prefs',JSON.stringify(p));}
+function isMuted(key){return!!_prefs().muted[key];}
+function isBlocked(uid){return!!_prefs().blocked[uid];}
+function toggleMute(key){const p=_prefs();if(p.muted[key])delete p.muted[key];else p.muted[key]=1;_savePrefs(p);renderDMList();renderGroupList();renderPubRoomList();}
+function toggleBlock(uid){const p=_prefs();if(p.blocked[uid])delete p.blocked[uid];else p.blocked[uid]=1;_savePrefs(p);}
+function toggleCurrentMute(){if(!CC)return;toggleMute(CC.id);updateMuteBtn();}
+function updateMuteBtn(){const btn=document.getElementById('mute-btn');if(!btn||!CC)return;const m=isMuted(CC.id);btn.textContent=m?'🔇':'🔔';btn.style.color=m?'var(--yel)':'';}
+function toggleBlockProfile(){if(!profTarget)return;toggleBlock(profTarget);const b=document.getElementById('prof-block-btn');if(!b)return;const bl=isBlocked(profTarget);b.textContent=bl?'UNBLOCK USER':'BLOCK USER';b.style.color=bl?'var(--red)':'#ff6666';b.style.borderColor=bl?'var(--red)':'#3a0000';}
+
 const ROLES=['ADMIN','MOD','GHOST','MEMBER'];
 function roleColor(r){return r==='ADMIN'?'var(--adm)':r==='MOD'?'var(--mod)':r==='GHOST'?'var(--ghost)':'var(--gd)';}
 
 function fmt(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function esc(t){return String(t==null?'':t).replace(/ /g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
-function genAddr(){return'0x'+[...Array(16)].map(()=>Math.floor(Math.random()*16).toString(16)).join('');}
-function genTxId(){return'TX'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();}
-function ts(){return Date.now();}
-function timeStr(t){return new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
-function dateStr(t){return new Date(t).toLocaleString([],{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function esc(t){return String(t==null?'':t).replace(//g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
+function genAddr(){return'0x'+[...Array(16)].map(()=>Math.floor(Math.random()*16).toString(16)).join('');},
+function genTxId(){return'TX'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();},
+function ts(){return Date.now();},
+function timeStr(t){return new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});},
+function dateStr(t){return new Date(t).toLocaleString([],{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});},
 
 
 // ── SOUND ENGINE ─────────────────────────────────────────────
-let _ac=null;
+let, _ac=null());
 function _ctx(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();if(_ac.state==='suspended')_ac.resume();return _ac;}
 function _beep(freq,dur,vol,type,fi,fo){vol=vol||0.08;type=type||'square';fi=fi||0.005;fo=fo||0.08;
   try{const c=_ctx(),o=c.createOscillator(),g=c.createGain();
@@ -1346,9 +1381,10 @@ async function renderDMList(){
     const last=msgs.sort((a,b)=>b.ts-a.ts)[0];
     const prev=last?(last.type==='pay'?`◈ ${fmt(last.amount)} GHO`:last.text?.slice(0,22)||''):'no messages';
     const item=document.createElement('div');
-    item.className='ci'+(CC?.id===dm.key?' active':'');
+    const _mDM=isMuted(dm.key);
+    item.className='ci'+(CC?.id===dm.key?' active':'')+(_mDM?' ci-muted':'');
     item.onclick=()=>openDM(other,dm.key);
-    item.innerHTML=`<div class="ci-av">${other[0].toUpperCase()}</div><div class="ci-info"><div class="ci-name">${esc(other)}</div><div class="ci-prev">${esc(prev)}</div></div>`;
+    item.innerHTML=`<div class="ci-av">${other[0].toUpperCase()}</div><div class="ci-info"><div class="ci-name">${esc(other)}${_mDM?' 🔇':''}</div><div class="ci-prev">${esc(prev)}</div></div>`;
     list.appendChild(item);
   });
 }
@@ -1369,9 +1405,10 @@ async function renderGroupList(){
     const last=msgs.sort((a,b)=>b.ts-a.ts)[0];
     const prev=last?(last.type==='pay'?`◈ ${fmt(last.amount)} GHO`:last.text?.slice(0,22)||''):'no messages';
     const item=document.createElement('div');
-    item.className='ci'+(CC?.id===g.key?' active':'');
+    const _mG=isMuted(g.key);
+    item.className='ci'+(CC?.id===g.key?' active':'')+(_mG?' ci-muted':'');
     item.onclick=()=>openGroup(g.key,g);
-    item.innerHTML=`<div class="ci-av group">#</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">${esc(g.name)}</div><div class="ci-prev">${esc(prev)}</div></div>`;
+    item.innerHTML=`<div class="ci-av group">#</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">${esc(g.name)}${_mG?' 🔇':''}</div><div class="ci-prev">${esc(prev)}</div></div>`;
     list.appendChild(item);
   });
 }
@@ -1395,6 +1432,9 @@ async function renderPubRoomList(){
   });
 }
 async function renderPubRoomModal(){
+  var _cs=document.getElementById('pub-create-sec'),_gn=document.getElementById('pub-guest-note');
+  if(_cs)_cs.style.display=(fbOK&&CU&&!CU.isGuest)?'block':'none';
+  if(_gn)_gn.style.display=(fbOK&&CU&&!CU.isGuest)?'none':'block';
   var list=document.getElementById('pub-room-list');if(!list)return;
   if(!fbOK){list.innerHTML='<div style="padding:16px;font-size:10px;color:var(--gd)">Firebase required.</div>';return;}
   list.innerHTML='<div style="padding:12px 16px;font-size:9px;color:var(--gd)">Loading...</div>';
@@ -1406,6 +1446,7 @@ async function renderPubRoomModal(){
   }).join('');
 }
 async function doCreatePubRoom(){
+  if(CU&&CU.isGuest){SFX.guestLimit();document.getElementById('puberr').textContent='Register to create public rooms';return;}
   var name=document.getElementById('pub-name')
     .value.trim()
     .toLowerCase()
@@ -1474,7 +1515,7 @@ function openDM(otherUser,key){
   document.getElementById('pton').textContent=otherUser;
   closeMod('ncmod');
   listenMessages('dms/'+dmKey+'/messages');
-  renderDMList();
+  renderDMList();updateMuteBtn();
   if(window.innerWidth<=700)closeSidebar();
 }
 
@@ -1491,7 +1532,7 @@ function openGroup(key,gdata){
   document.getElementById('mbr-btn').style.display='flex';
   document.getElementById('pay-btn').style.display='none'; // group pay disabled (DMs only)
   listenMessages('groups/'+key+'/messages');
-  renderGroupList();
+  renderGroupList();updateMuteBtn();
   if(window.innerWidth<=700)closeSidebar();
 }
 
@@ -1505,7 +1546,7 @@ function listenMessages(path){
       const handler=ref.on('value',snap=>{
         if(CC&&CC.id===ccId){
           var _d=snap.val();
-          if(_d){var _mv=Object.values(_d),_l=_mv.reduce(function(a,b){return b.ts>a.ts?b:a;},{ts:0});if(_l.from&&_l.from!==CU?.id&&Date.now()-_l.ts<3000)SFX.msgRecv();}
+          if(_d){var _mv=Object.values(_d),_l=_mv.reduce(function(a,b){return b.ts>a.ts?b:a;},{ts:0});if(_l.from&&_l.from!==CU?.id&&Date.now()-_l.ts<3000&&!isMuted(ccId))SFX.msgRecv();}
           renderMessages(_d);
         }
       });
@@ -1533,7 +1574,7 @@ function renderMessages(msgsObj){
 
   msgs.forEach(msg=>{
     const isMe=msg.from===CU.id;
-    // system messages
+    if(!isMe&&msg.from&&isBlocked(msg.from))return;
     if(msg.type==='sys'){
       const s=document.createElement('div');s.className='sysmsg';s.textContent=msg.text||'';container.appendChild(s);return;
     }
@@ -1883,11 +1924,19 @@ async function openMembers(){
     item.innerHTML=`
       <div class="mbr-av">${uid[0].toUpperCase()}</div>
       <div class="mbr-name">${esc(uid)}</div>
+      ${uid!==CU.id?`<button class="mbr-mute${isMuted(uid)?' on':''}" onclick="toggleMute('${uid}');openMembers()">${isMuted(uid)?'🔇':'🔔'}</button><button class="mbr-block${isBlocked(uid)?' on':''}" onclick="toggleBlock('${uid}');openMembers()">${isBlocked(uid)?'UNBLK':'BLOCK'}</button>`:''}
       ${isAdmin&&uid!==CU.id?`<select class="mbr-role-sel" onchange="setMemberRole('${uid}',this.value)">${roleOpts}</select><button class="mbr-kick" onclick="kickMember('${uid}')">KICK</button>`:`<span class="mtag tag-${info.role||'MEMBER'}" style="font-size:9px;padding:1px 5px">[${info.role||'MEMBER'}]</span>`}
     `;
     list.appendChild(item);
   });
   document.getElementById('inverr').textContent='';
+  const _xd=document.getElementById('del-grp-btn');if(_xd)_xd.remove();
+  if(gData.owner===CU.id||gData.members[CU.id]?.role==='ADMIN'){
+    const _db=document.createElement('button');
+    _db.id='del-grp-btn';_db.className='del-btn';_db.textContent='⚠ DELETE THIS GROUP';
+    _db.onclick=()=>{closeMod('mbrmod');openMod('delgrpmod');};
+    document.querySelector('#mbrmod .mbdy').appendChild(_db);
+  }
   openMod('mbrmod');
 }
 
@@ -1902,6 +1951,15 @@ async function kickMember(uid){
   else{const d=ldb();if(d.groups[CC.id]?.members)delete d.groups[CC.id].members[uid];lsv(d);}
   openMembers();
 }
+async function confirmDeleteGroup(){
+  if(!CC||CC.type!=='group')return;
+  const _gd=CC.data;
+  if(!(_gd&&(_gd.owner===CU.id||_gd.members?.[CU.id]?.role==='ADMIN'))){closeMod('delgrpmod');return;}
+  if(fbOK){await authReady();await db.ref('groups/'+CC.id).remove();}
+  else{const d=ldb();delete d.groups[CC.id];lsv(d);}
+  closeMod('delgrpmod');closeChat();renderGroupList();
+}
+
 async function doInvite(){
   const raw=document.getElementById('inv-user').value.trim();
   const errEl=document.getElementById('inverr');
@@ -2074,6 +2132,7 @@ async function openProfile(uid){
   // Show correct sections
   document.getElementById('prof-edit-section').style.display=isMe?'block':'none';
   document.getElementById('prof-dm-section').style.display=isMe?'none':'block';
+  if(!isMe){const _bb=document.getElementById('prof-block-btn');if(_bb){const _bl=isBlocked(uid);_bb.textContent=_bl?'UNBLOCK USER':'BLOCK USER';_bb.style.color=_bl?'var(--red)':'#ff6666';_bb.style.borderColor=_bl?'var(--red)':'#3a0000';}}
 
   if(isMe){
     document.getElementById('prof-bio-input').value=userData.bio||'';
@@ -2157,7 +2216,7 @@ function mobileBack(){
   // on mobile re-open sidebar
   if(window.innerWidth<=700)toggleSidebar();
 }
-
+}
 </script>
 </body>
 </html>
