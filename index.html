@@ -445,7 +445,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
       <span><span class="sdot"></span>LIVE</span>
       <span id="t-uname" style="color:var(--g)">——</span>
       <span id="t-utag"></span>
-      <div class="wbadge" onclick="openWallet()">◈ <span id="topbal">0.00 GHO</span></div>
+      <div id="wal-badge" class="wbadge" onclick="openWallet()">◈ <span id="topbal">0.00 GHO</span></div>
       <button class="tbtn" onclick="logout()">LOGOUT</button>
       <button class="mob-menu-btn" onclick="toggleSidebar()" title="Channels">☰</button>
     </div>
@@ -1406,16 +1406,41 @@ async function renderPubRoomModal(){
   }).join('');
 }
 async function doCreatePubRoom(){
-  var name=document.getElementById('pub-name').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  var name=document.getElementById('pub-name')
+    .value.trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g,'');
   var desc=document.getElementById('pub-desc').value.trim();
-  var errEl=document.getElementById('puberr');errEl.textContent='';
-  if(!name||name.length<2){errEl.textContent='Name: 2+ chars, letters/numbers/_';return;}
-  if(!fbOK){errEl.textContent='Firebase required';return;}
-  if(await fbGet('pubrooms/'+name)){errEl.textContent='Room name taken';return;}
-  var room={name:name,desc:desc||'',owner:CU.id,created:ts()};
-  await fbSet('pubrooms/'+name,room);
-  if(!CU.isGuest)await fbSet('pubrooms/'+name+'/joined/'+CU.id,{ts:ts()});
-  closeMod('pubmod');openPubRoom(name,room);renderPubRoomList();
+  var errEl=document.getElementById('puberr');
+  errEl.textContent='';
+  if(!name || name.length<2){
+    errEl.textContent='Name: 2+ chars, letters/numbers/_';
+    return;
+  }
+  if(!fbOK){
+    errEl.textContent='Firebase required';
+    return;
+  }
+  if(await fbGet('pubrooms/'+name)){
+    errEl.textContent='Room name taken';
+    return;
+  }
+  var room={
+    name:name,
+    desc:desc||'',
+    owner:CU.id,
+    createdAt:Date.now()
+  };
+  await fbSet('pubrooms/'+name+'/info',room);
+  if(!CU.isGuest){
+    await fbSet(
+      'pubrooms/'+name+'/joined/'+CU.id,
+      {ts:Date.now()}
+    );
+  }
+  closeMod('pubmod');
+  openPubRoom(name,{info:room});
+  renderPubRoomList();
 }
 function openPubRoom(key,rdata){
   if(CC&&msgListeners[CC.id]){msgListeners[CC.id]();delete msgListeners[CC.id];}
