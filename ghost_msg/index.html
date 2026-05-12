@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST_MSG v4 // SECURE NETWORK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="mc"></canvas>
+
+<!-- BOOT -->
+<div class="boot" id="boot">
+  <div class="blogo">GHOST_MSG</div>
+  <div class="bline">[SYS] Initializing encrypted channel...... <span style="color:var(--g)">OK</span></div>
+  <div class="bline">[SYS] Loading anonymization protocol...... <span style="color:var(--g)">OK</span></div>
+  <div class="bline">[SYS] Establishing null-route relay......... <span style="color:var(--g)">OK</span></div>
+  <div class="bline">[SYS] Connecting Firebase realtime DB..... <span style="color:var(--cyn)">OK</span></div>
+  <div class="bline">[SYS] Mounting GHOST_CASH ledger........... <span style="color:var(--gold)">OK</span></div>
+  <div class="bline">[SYS] Loading group channel protocol...... <span style="color:var(--cyn)">OK</span></div>
+  <div class="bline">[SYS] Arming timed message system......... <span style="color:var(--yel)">OK</span></div>
+  <div class="bline">[SYS] No-log policy enforced................ <span style="color:var(--g)">OK</span></div>
+  <div class="bline" style="color:var(--g)">[SYS] GHOST_MSG v4.0.0 // NETWORK READY</div>
+  <div class="bbar"><div class="bprog"></div></div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">GHOST<span>_</span>MSG <span style="font-size:9px;color:var(--cyn);letter-spacing:1px">v4</span></div>
+    <div class="tbar-r" id="tbar-auth">
+      <span><span class="sdot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></span><span id="conn-status">NOT CONNECTED</span></span>
+    </div>
+    <div class="tbar-r" id="tbar-live" style="display:none">
+      <span><span class="sdot"></span>LIVE</span>
+      <span id="t-uname" style="color:var(--g)">——</span>
+      <span id="t-utag"></span>
+      <div id="wal-badge" class="wbadge" onclick="openWallet()">◈ <span id="topbal">0.00 GHO</span></div>
+      <button class="tbtn" onclick="logout()">LOGOUT</button>
+      <button class="mob-menu-btn" onclick="toggleSidebar()" title="Channels">☰</button>
+    </div>
+  </div>
+
+  <!-- AUTH PAGE -->
+  <div class="page active" id="auth-page">
+    <div class="aterm">
+      <div class="ttbar">
+        <div class="td r"></div><div class="td y"></div><div class="td gr"></div>
+        <span style="margin-left:8px">ghost_msg — firebase_auth v4.0</span>
+      </div>
+      <div class="tbody">
+        <div class="tpr"><span class="cmd">ghost_msg</span> <span class="arg">--firebase --multi-user --wallet</span><br><span style="color:#336622">// Real-time. Anonymous. GHOST_CASH enabled.</span></div>
+        <div id="setup-warn" class="setup-banner" style="display:none">
+          <strong>⚠ FIREBASE CONFIG REQUIRED</strong><br>
+          Edit this file and replace the Firebase config in the &lt;script&gt; section.<br>
+          Get a free Firebase project at <strong>console.firebase.google.com</strong><br>
+          Then enable: <strong>Realtime Database</strong> + <strong>Authentication → Email/Password</strong><br>
+          <span id="fb-err-msg" style="color:var(--red)"></span>
+        </div>
+        <div id="fb-warn" class="setup-banner" style="display:none;border-color:rgba(255,200,0,.3);color:#ffcc44">
+          <strong>⚠ FIREBASE NOT RESPONDING</strong><br>
+          Check your <strong>databaseURL</strong> and that Authentication + Realtime Database are both enabled in your Firebase project.
+        </div>
+        <div id="https-warn" class="setup-banner" style="display:none;border-color:rgba(255,50,50,.4);color:#ff7755">
+          <strong>⚠ HTTPS REQUIRED</strong><br>
+          Firebase Auth does not work when opening the file directly from your phone storage (<code>content://</code> or <code>file://</code>).<br><br>
+          <strong>To use on mobile:</strong><br>
+          • Host the file on a web server (Netlify, GitHub Pages, etc.)<br>
+          • Or serve locally via <code>npx serve</code> / <code>python -m http.server</code><br>
+          • Access via <code>https://</code> or <code>http://localhost</code>
+        </div>
+        <div id="auth-ok-badge" style="display:none;margin-bottom:12px;padding:6px 10px;border:1px solid rgba(0,255,65,.2);background:rgba(0,255,65,.04);font-size:9px;color:var(--gd);letter-spacing:1px">
+          <span style="color:var(--g)">🔒 FIREBASE AUTH ACTIVE</span> — database protected, session persists
+        </div>
+        <div class="atabs">
+          <button class="atab active" onclick="switchTab('login',event)">LOGIN</button>
+          <button class="atab" onclick="switchTab('register',event)">REGISTER</button>
+          <button class="atab" onclick="switchTab('guest',event)" style="color:rgba(0,245,255,.7)">GUEST</button>
+        </div>
+        <!-- LOGIN -->
+        <div id="lform">
+          <div class="fg"><label class="fl">USERNAME</label><input class="ti" id="lu" type="text" placeholder="your_alias" autocomplete="off" spellcheck="false"></div>
+          <div class="fg"><label class="fl">PASSWORD</label><input class="ti" id="lp" type="password" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+          <button class="tb2" id="login-btn" onclick="doLogin()">ACCESS CHANNEL</button>
+          <div class="terr" id="lerr"></div>
+        </div>
+        <!-- REGISTER -->
+        <div id="rform" style="display:none">
+          <div class="fg"><label class="fl">CHOOSE ALIAS</label><input class="ti" id="ru" type="text" placeholder="ghost_alias" autocomplete="off" spellcheck="false"></div>
+          <div class="fg"><label class="fl">CUSTOM TAG <span style="color:var(--gd)">(2–5 chars)</span></label>
+            <input class="ti" id="rtag" type="text" placeholder="eg: DEV, SYS, H4X" maxlength="5" autocomplete="off" spellcheck="false">
+            <div class="tag-hint">// shown next to your name globally. letters/numbers only.</div>
+          </div>
+          <div class="fg"><label class="fl">SET PASSPHRASE</label><input class="ti" id="rp" type="password" placeholder="min 6 chars"></div>
+          <div class="fg"><label class="fl">CONFIRM PASSPHRASE</label><input class="ti" id="rp2" type="password" placeholder="repeat" onkeydown="if(event.key==='Enter')doRegister()"></div>
+          <div class="fg"><label class="fl">BIO <span style="color:var(--gd)">(optional, max 100 chars)</span></label><input class="ti" id="rbio" type="text" placeholder="who are you in the shadows..." maxlength="100"></div>
+          <button class="tb2" id="reg-btn" onclick="doRegister()">CREATE GHOST IDENTITY</button>
+          <div class="terr" id="rerr"></div>
+        </div>
+        <div id="guestform" style="display:none">
+          <div style="padding:8px 0 12px;font-size:10px;color:var(--cyn);line-height:1.9;border-bottom:1px solid var(--border);margin-bottom:14px">
+            // GUEST MODE<br><span style="color:var(--gd)">No wallet or money system<br>Max 5 DM contacts &middot; Max 2 groups<br>Session only — lost on refresh</span>
+          </div>
+          <div class="fg"><label class="fl" style="color:var(--cyn)">GUEST ALIAS</label><input class="ti" id="gu" type="text" placeholder="guest_alias" autocomplete="off" spellcheck="false" style="border-color:rgba(0,245,255,.3)" onkeydown="if(event.key==='Enter')doGuest()"></div>
+          <div class="fg"><label class="fl" style="color:var(--cyn)">TAG <span style="color:var(--gd)">(2-5 chars)</span></label><input class="ti" id="gtag" type="text" placeholder="GUE" maxlength="5" autocomplete="off" spellcheck="false" style="border-color:rgba(0,245,255,.3)"></div>
+          <button class="tb2" onclick="doGuest()" style="border-color:rgba(0,245,255,.4);color:var(--cyn)">ENTER AS GUEST</button>
+          <div class="terr" id="guerr"></div>
+        </div>
+        <div class="warnbox">
+          <div class="wt">// SYSTEM NOTICE</div><br>
+          New accounts start with <span style="color:var(--gold)">◈ 0 GHO</span> — earn or receive GHO to spend.<br>
+          <span style="color:var(--gold)">100 GHO = $1.00 USD</span> // simulated exchange rate.<br>
+          Custom tag: 2–5 chars shown on all your messages.<br>
+          Group roles: ADMIN / MOD / GHOST / MEMBER.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT PAGE -->
+  <div class="page" id="chat-page">
+    <!-- mobile sidebar overlay -->
+    <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+    <div class="chat-body">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <!-- DMs -->
+      <div class="sb-sec">
+        <span>// DM CHANNELS</span>
+        <button class="sb-add" onclick="openMod('ncmod')" title="New DM">+</button>
+      </div>
+      <div class="clist" id="dm-list"></div>
+      <!-- Groups -->
+      <div class="sb-sec" style="margin-top:4px">
+        <span>// GROUP CHANNELS</span>
+        <button class="sb-add" onclick="openMod('gcmod')" title="Create Group">+</button>
+      </div>
+      <div class="clist" id="grp-list"></div>
+      <!-- Public Rooms -->
+      <div class="sb-sec" style="margin-top:4px">
+        <span style="color:rgba(0,245,255,.6)">// PUBLIC ROOMS</span>
+        <button class="sb-add" onclick="openMod('pubmod')" title="Browse/Create Rooms" style="border-color:rgba(0,245,255,.3);color:var(--cyn)">⊕</button>
+      </div>
+      <div class="clist" id="pub-list"></div>
+      <button class="sb-close-btn" onclick="closeSidebar()">✕ CLOSE MENU</button>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="carea">
+      <div class="empty" id="empty">
+        <div class="bigico">◈</div>
+        <p>SELECT A CHANNEL</p>
+        <p style="font-size:9px;color:#1a4d1a">REALTIME // E2E // GHOST_CASH</p>
+      </div>
+      <div id="achat" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+        <div class="chdr">
+          <div class="ctgt">
+            <div class="chav" id="chav">?</div>
+            <div>
+              <div class="chn" id="chn">——</div>
+              <div class="chs" id="chs">——</div>
+            </div>
+          </div>
+          <div class="hacts">
+            <button class="mob-back-btn" onclick="mobileBack()">← BACK</button>
+            <button class="ibtn" id="mbr-btn" style="display:none" onclick="openMembers()">MEMBERS</button>
+            <button class="paybtn" id="pay-btn" onclick="openPay()">◈ SEND</button>
+            <button class="ibtn" id="mute-btn" onclick="toggleCurrentMute()">🔔</button>
+            <button class="ibtn" onclick="clearChat()">CLR</button>
+            <button class="ibtn" onclick="closeChat()">✕</button>
+          </div>
+        </div>
+        <div class="msgs" id="msgs"></div>
+        <div id="send-err"></div>
+        <div class="inarea">
+          <div class="inrow">
+            <span style="color:var(--gd);font-size:11px">►</span>
+            <input class="minput" id="minput" type="text" placeholder="type message... (enter to send)" autocomplete="off" onkeydown="handleKey(event)" oninput="updCC()">
+            <button class="sndbtn" onclick="sendMsg()">SEND</button>
+          </div>
+          <div class="in-opts">
+            <button class="in-opt-btn" id="timer-toggle" onclick="toggleTimer()" title="Timed message">⏱ TIMED MSG</button>
+            <select class="timer-sel" id="timer-dur" style="display:none">
+              <option value="10">10 sec</option>
+              <option value="30">30 sec</option>
+              <option value="60">1 min</option>
+              <option value="300">5 min</option>
+              <option value="600">10 min</option>
+              <option value="3600">1 hour</option>
+            </select>
+            <span style="font-size:9px;color:var(--gd);margin-left:auto" id="cctr">0 chars</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- end carea -->
+    </div><!-- end chat-body -->
+  <!-- GHO RATE TICKER (inside chat-page, below chat-body, never overlaps) -->
+  <div id="gho-ticker" style="display:none;background:rgba(0,8,0,.97);border-top:1px solid rgba(255,215,0,.12);padding:3px 18px;font-size:9px;color:var(--gdim);align-items:center;gap:16px;letter-spacing:1px;flex-shrink:0">
+    <span style="color:var(--gold)">◈ GHOST_CASH</span>
+    <span>100 GHO = $1.00 USD</span>
+    <span style="color:rgba(0,212,255,.4)">|</span>
+    <span>1 GHO = $0.01 USD</span>
+    <span style="color:rgba(0,212,255,.4)">|</span>
+    <span style="color:var(--gd)">SIMULATED EXCHANGE RATE</span>
+  </div>
+  </div><!-- end chat-page -->
+
+<!-- SUCCESS FLASH -->
+<div class="mov" id="ncmod">
+  <div class="modal">
+    <div class="mtit"><span>// NEW DM CHANNEL</span><button class="mcl" onclick="closeMod('ncmod')">✕</button></div>
+    <div class="mbdy">
+      <div class="fg">
+        <label class="fl">TARGET (username#TAG)</label>
+        <input class="ti" id="ncu" type="text" placeholder="ghost_alias#DEV" autocomplete="off" onkeydown="if(event.key==='Enter')doNC()">
+        <div class="tag-hint">// format: username#YOURTAG — both required to find user</div>
+      </div>
+      <button class="tb2" onclick="doNC()" style="margin-top:8px">ESTABLISH CHANNEL</button>
+      <div class="terr" id="ncerr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="mov" id="gcmod">
+  <div class="modal">
+    <div class="mtit" style="color:var(--cyn)"><span>// CREATE GROUP CHANNEL</span><button class="mcl" onclick="closeMod('gcmod')">✕</button></div>
+    <div class="mbdy">
+      <div class="fg"><label class="fl" style="color:rgba(0,212,255,.6)">GROUP NAME</label><input class="ti" id="gname" type="text" placeholder="channel_name" autocomplete="off" spellcheck="false"></div>
+      <div class="fg"><label class="fl" style="color:rgba(0,212,255,.6)">DESCRIPTION (optional)</label><input class="ti" id="gdesc" type="text" placeholder="what's this channel about..." maxlength="60"></div>
+      <div class="fg"><label class="fl" style="color:rgba(0,212,255,.6)">INVITE MEMBERS <span style="color:var(--gd)">(comma separated)</span></label><input class="ti" id="ginvite" type="text" placeholder="user1, user2, user3..." autocomplete="off"></div>
+      <button class="tb2-cyn" onclick="doCreateGroup()">CREATE GROUP CHANNEL</button>
+      <div class="terr" id="gcerr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLIC ROOM MODAL -->
+<div class="mov" id="pubmod">
+  <div class="modal" style="width:400px">
+    <div class="mtit" style="color:var(--cyn)"><span>// PUBLIC ROOMS</span><button class="mcl" onclick="closeMod('pubmod')">✕</button></div>
+    <div class="mbdy" style="padding:0">
+      <div id="pub-room-list" style="max-height:240px;overflow-y:auto"></div>
+      <div id="pub-create-sec" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--gd);margin-bottom:10px;letter-spacing:1px">// CREATE NEW PUBLIC ROOM</div>
+        <div class="fg"><input class="ti" id="pub-name" type="text" placeholder="room_name" maxlength="24" autocomplete="off" spellcheck="false"></div>
+        <div class="fg"><input class="ti" id="pub-desc" type="text" placeholder="description (optional)" maxlength="60"></div>
+        <button class="tb2-cyn" onclick="doCreatePubRoom()" style="font-size:10px;padding:7px">CREATE PUBLIC ROOM</button>
+        <div class="terr" id="puberr"></div>
+      </div>
+      <div id="pub-guest-note" style="display:none;padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--gd)">// Register an account to create public rooms</div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBERS MODAL -->
+<div class="mov" id="mbrmod">
+  <div class="modal" style="width:340px">
+    <div class="mtit"><span id="mbr-title">// MEMBERS</span><button class="mcl" onclick="closeMod('mbrmod')">✕</button></div>
+    <div class="mbdy" style="padding:0">
+      <div class="mbr-list" id="mbr-list"></div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border)">
+        <div class="fg"><label class="fl">INVITE USER (username#TAG)</label><input class="ti" id="inv-user" type="text" placeholder="ghost_alias#DEV" style="font-size:11px"></div>
+        <button class="tb2" onclick="doInvite()" style="font-size:10px;padding:7px">SEND INVITE</button>
+        <div class="terr" id="inverr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAY MODAL -->
+<div class="mov" id="paymod">
+  <div class="modal">
+    <div class="mtit"><span>◈ GHOST_CASH TRANSFER</span><button class="mcl" onclick="closeMod('paymod')">✕</button></div>
+    <div class="mbdy">
+      <div class="fg" style="margin-bottom:12px;font-size:10px;color:var(--gd)">RECIPIENT: <span id="pton" style="color:var(--g)">——</span></div>
+      <div class="baldis">
+        <div class="ballbl">YOUR BALANCE</div>
+        <div class="balval"><span>◈</span><span id="pbal">0.00</span> GHO</div>
+      </div>
+      <div class="fg"><label class="fl" style="color:var(--gdim)">QUICK AMOUNTS</label>
+        <div class="presets">
+          <button class="pbtn2" onclick="setP(10,this)">10</button>
+          <button class="pbtn2" onclick="setP(50,this)">50</button>
+          <button class="pbtn2" onclick="setP(100,this)">100</button>
+          <button class="pbtn2" onclick="setP(500,this)">500</button>
+          <button class="pbtn2" onclick="setP(1000,this)">1,000</button>
+        </div>
+      </div>
+      <div class="fg"><label class="fl" style="color:var(--gdim)">AMOUNT (GHO)</label><input class="tgi" id="pamt" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="clrP()"></div>
+      <div class="fg" style="margin-top:9px"><label class="fl" style="color:var(--gdim)">NOTE (OPTIONAL)</label><input class="ti" id="pnote" type="text" placeholder="reason..." style="font-size:11px" maxlength="80"></div>
+      <button class="pcbtn" onclick="doPayment()">▶ EXECUTE TRANSFER</button>
+      <div class="terr2" id="perr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WALLET MODAL -->
+<div class="mov" id="walmod">
+  <div class="modal" style="width:460px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="mtit" style="color:var(--gold);flex-shrink:0">
+      <span>◈ GHOST_CASH WALLET</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="balhide-btn" onclick="toggleBalHide()" title="Hide balance" style="background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);color:var(--gdim);font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:1px">👁 HIDE</button>
+        <button class="mcl" onclick="closeMod('walmod')">✕</button>
+      </div>
+    </div>
+    <!-- hero -->
+    <div class="whero" style="flex-shrink:0">
+      <div class="wblbl">AVAILABLE BALANCE</div>
+      <div class="wbig"><span>◈</span><span id="wbigbal">0.00</span></div>
+      <div style="font-size:10px;color:var(--gdim);margin-top:3px;letter-spacing:2px">GHOST COIN · <span id="wusd-equiv" style="color:var(--g)">$0.00</span> USD EQUIV.</div>
+      <div style="font-size:9px;color:rgba(255,215,0,.35);margin-top:5px">100 GHO = $1.00 USD &nbsp;·&nbsp; 1 GHO = $0.01 USD</div>
+      <div class="waddr" id="waddr">ADDR: ——</div>
+    </div>
+    <!-- stats -->
+    <div class="wstats" style="flex-shrink:0">
+      <div class="wstat"><div class="wsv" id="wssent">0.00</div><div class="wsl">SENT</div></div>
+      <div class="wstat"><div class="wsv" id="wsrecv">0.00</div><div class="wsl">RECEIVED</div></div>
+      <div class="wstat"><div class="wsv" id="wstxc">0</div><div class="wsl">TXS</div></div>
+    </div>
+    <!-- tab buttons -->
+    <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button id="wtbtn-history" onclick="switchWalTab('history')" style="flex:1;padding:9px;background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;margin-bottom:-1px;transition:all .2s">TX HISTORY</button>
+      <button id="wtbtn-exchange" onclick="switchWalTab('exchange')" style="flex:1;padding:9px;background:none;border:none;border-bottom:2px solid transparent;color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;margin-bottom:-1px;transition:all .2s">EXCHANGE</button>
+    </div>
+    <!-- history tab -->
+    <div id="wtab-history" style="overflow-y:auto;flex:1">
+      <div class="txlist" id="txlist"></div>
+    </div>
+    <!-- exchange tab -->
+    <div id="wtab-exchange" style="display:none;padding:36px 24px;text-align:center;flex:1">
+      <div style="font-family:'VT323',monospace;font-size:64px;color:rgba(255,215,0,.3);line-height:1;margin-bottom:16px">◈⇄$</div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--gold);letter-spacing:4px;margin-bottom:12px;text-shadow:0 0 12px rgba(255,215,0,.4)">COMING SOON</div>
+      <div style="font-size:11px;color:var(--gd);line-height:2;max-width:300px;margin:0 auto">
+        Real money exchange is under development.<br>
+        Convert GHO ↔ USD when it launches.
+      </div>
+      <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:300px;margin-left:auto;margin-right:auto">
+        <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">GHO → USD<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
+        <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">USD → GHO<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
+        <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">WITHDRAW<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
+        <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">DEPOSIT<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
+      </div>
+      <div style="margin-top:20px;font-size:9px;color:rgba(255,215,0,.3);letter-spacing:1px">CURRENT RATE: 100 GHO = $1.00 USD</div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS FLASH -->
+<div class="psov" id="psov">
+  <div class="psico">◈</div>
+  <div class="pstxt">TRANSFER COMPLETE</div>
+  <div class="pssub" id="pssub">——</div>
+</div>
+
+<!-- CLEAR CONFIRM MODAL -->
+<div class="mov" id="clr-ov">
+  <div class="modal" style="width:380px">
+    <div class="mtit" style="color:var(--red)"><span id="clr-title">CLEAR CHAT</span><button class="mcl" onclick="closeMod('clr-ov')">✕</button></div>
+    <div class="mbdy" id="clr-body"></div>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="mov" id="profmod">
+  <div class="modal" style="width:400px">
+    <div class="mtit" id="prof-title"><span>// USER PROFILE</span><button class="mcl" onclick="closeMod('profmod')">✕</button></div>
+    <div style="padding:22px 20px 0">
+      <!-- avatar + name row -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div id="prof-av" style="width:54px;height:54px;border:1px solid var(--border);background:var(--gk);display:flex;align-items:center;justify-content:center;font-family:'VT323',monospace;font-size:32px;color:var(--g);flex-shrink:0"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span id="prof-name" style="font-family:'Orbitron',sans-serif;font-size:14px;color:var(--g);letter-spacing:2px"></span>
+            <span id="prof-tag" class="mtag tag-custom" style="font-size:10px"></span>
+          </div>
+          <div id="prof-since" style="font-size:9px;color:var(--gd);margin-top:4px;letter-spacing:1px"></div>
+          <div id="prof-addr" style="font-size:9px;color:var(--gd);margin-top:2px;opacity:.5"></div>
+        </div>
+      </div>
+      <!-- bio -->
+      <div style="border:1px solid var(--border);background:rgba(0,20,0,.3);padding:12px 14px;margin-bottom:14px;min-height:52px">
+        <div style="font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:6px">// BIO</div>
+        <div id="prof-bio" style="font-size:12px;color:var(--wht);line-height:1.6"></div>
+      </div>
+      <!-- stats row -->
+      <div style="display:flex;border:1px solid var(--border);margin-bottom:14px">
+        <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--border)">
+          <div id="prof-bal" style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--gold);font-weight:700"></div>
+          <div id="prof-bal-label" style="font-size:8px;color:var(--gdim);margin-top:2px;letter-spacing:1px">BALANCE (GHO)</div>
+        </div>
+        <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--border)">
+          <div id="prof-usd" style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--g);font-weight:700"></div>
+          <div style="font-size:8px;color:var(--gd);margin-top:2px;letter-spacing:1px">EQUIV. USD</div>
+        </div>
+        <div style="flex:1;padding:10px;text-align:center">
+          <div id="prof-txc" style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--g);font-weight:700">0</div>
+          <div style="font-size:8px;color:var(--gd);margin-top:2px;letter-spacing:1px">TRANSACTIONS</div>
+        </div>
+      </div>
+      <!-- own profile edit bio -->
+      <div id="prof-edit-section" style="display:none;margin-bottom:16px">
+        <div style="font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:6px">// EDIT YOUR BIO</div>
+        <input class="ti" id="prof-bio-input" type="text" placeholder="update your bio..." maxlength="100" style="font-size:11px">
+        <!-- hide balance toggle -->
+        <div style="margin-top:10px;padding:10px 12px;border:1px solid var(--border);background:rgba(0,20,0,.2);display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:10px;color:var(--wht);letter-spacing:1px">Hide GHO balance on profile</div>
+            <div style="font-size:9px;color:var(--gd);margin-top:2px">Others won't see your GHO / USD amounts</div>
+          </div>
+          <button id="prof-balhide-toggle" onclick="toggleProfileBalHide()" style="background:rgba(0,20,0,.4);border:1px solid var(--border);color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:9px;padding:5px 12px;cursor:pointer;transition:all .2s;letter-spacing:1px;min-width:52px">OFF</button>
+        </div>
+        <button class="tb2" onclick="saveBio()" style="margin-top:9px;font-size:10px;padding:7px;letter-spacing:2px">SAVE CHANGES</button>
+        <div class="terr" id="prof-err" style="font-size:10px"></div>
+      </div>
+      <!-- dm button for other users -->
+      <div id="prof-dm-section" style="display:none;margin-bottom:16px">
+        <button class="tb2" id="prof-dm-btn" onclick="dmFromProfile()" style="font-size:10px;padding:8px;letter-spacing:2px">► OPEN DM CHANNEL</button>
+        <button id="prof-block-btn" onclick="toggleBlockProfile()" style="width:100%;margin-top:6px;padding:7px;background:rgba(255,42,42,.06);border:1px solid #3a0000;color:#ff6666;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">BLOCK USER</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE GROUP MODAL -->
+<div class="mov" id="delgrpmod">
+  <div class="modal" style="width:360px">
+    <div class="mtit" style="color:var(--red)"><span>⚠ DELETE GROUP</span><button class="mcl" onclick="closeMod('delgrpmod')">✕</button></div>
+    <div class="mbdy">
+      <div style="font-size:11px;color:var(--wht);line-height:1.8;margin-bottom:14px">Permanently deletes this group and all messages. Cannot be undone.</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeMod('delgrpmod')" style="flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">CANCEL</button>
+        <button onclick="confirmDeleteGroup()" style="flex:1;padding:9px;background:rgba(255,42,42,.08);border:1px solid var(--red);color:var(--red);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;font-weight:700">DELETE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<!-- App scripts — order matters -->
+<script src="config.js"></script>
+<script src="utils.js"></script>
+<script src="auth.js"></script>
+<script src="sidebar.js"></script>
+<script src="chat.js"></script>
+<script src="group.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
