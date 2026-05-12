@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- CSP meta fallback (primary CSP is set via firebase.json hosting headers) -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self';
+           script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com;
+           style-src  'self' 'unsafe-inline' https://fonts.googleapis.com;
+           font-src   'self' https://fonts.gstatic.com;
+           connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://us-central1-ghost-msg.cloudfunctions.net;
+           img-src 'self' data:;
+           frame-ancestors 'none';
+           base-uri 'self';
+           form-action 'self';">
 <title>GHOST_MSG v4 // SECURE NETWORK</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -19,7 +30,7 @@
   <div class="bline">[SYS] Mounting GHOST_CASH ledger........... <span style="color:var(--gold)">OK</span></div>
   <div class="bline">[SYS] Loading group channel protocol...... <span style="color:var(--cyn)">OK</span></div>
   <div class="bline">[SYS] Arming timed message system......... <span style="color:var(--yel)">OK</span></div>
-  <div class="bline">[SYS] No-log policy enforced................ <span style="color:var(--g)">OK</span></div>
+  <div class="bline">[SYS] Security layer active................. <span style="color:var(--g)">OK</span></div>
   <div class="bline" style="color:var(--g)">[SYS] GHOST_MSG v4.0.0 // NETWORK READY</div>
   <div class="bbar"><div class="bprog"></div></div>
 </div>
@@ -92,12 +103,13 @@
             <input class="ti" id="rtag" type="text" placeholder="eg: DEV, SYS, H4X" maxlength="5" autocomplete="off" spellcheck="false">
             <div class="tag-hint">// shown next to your name globally. letters/numbers only.</div>
           </div>
-          <div class="fg"><label class="fl">SET PASSPHRASE</label><input class="ti" id="rp" type="password" placeholder="min 6 chars"></div>
+          <div class="fg"><label class="fl">SET PASSPHRASE <span style="color:var(--gd)">(min 8 chars, include a number)</span></label><input class="ti" id="rp" type="password" placeholder="min 8 chars"></div>
           <div class="fg"><label class="fl">CONFIRM PASSPHRASE</label><input class="ti" id="rp2" type="password" placeholder="repeat" onkeydown="if(event.key==='Enter')doRegister()"></div>
           <div class="fg"><label class="fl">BIO <span style="color:var(--gd)">(optional, max 100 chars)</span></label><input class="ti" id="rbio" type="text" placeholder="who are you in the shadows..." maxlength="100"></div>
           <button class="tb2" id="reg-btn" onclick="doRegister()">CREATE GHOST IDENTITY</button>
           <div class="terr" id="rerr"></div>
         </div>
+        <!-- GUEST -->
         <div id="guestform" style="display:none">
           <div style="padding:8px 0 12px;font-size:10px;color:var(--cyn);line-height:1.9;border-bottom:1px solid var(--border);margin-bottom:14px">
             // GUEST MODE<br><span style="color:var(--gd)">No wallet or money system<br>Max 5 DM contacts &middot; Max 2 groups<br>Session only — lost on refresh</span>
@@ -120,24 +132,20 @@
 
   <!-- CHAT PAGE -->
   <div class="page" id="chat-page">
-    <!-- mobile sidebar overlay -->
     <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
     <div class="chat-body">
     <!-- SIDEBAR -->
     <div class="sidebar" id="sidebar">
-      <!-- DMs -->
       <div class="sb-sec">
         <span>// DM CHANNELS</span>
         <button class="sb-add" onclick="openMod('ncmod')" title="New DM">+</button>
       </div>
       <div class="clist" id="dm-list"></div>
-      <!-- Groups -->
       <div class="sb-sec" style="margin-top:4px">
         <span>// GROUP CHANNELS</span>
         <button class="sb-add" onclick="openMod('gcmod')" title="Create Group">+</button>
       </div>
       <div class="clist" id="grp-list"></div>
-      <!-- Public Rooms -->
       <div class="sb-sec" style="margin-top:4px">
         <span style="color:rgba(0,245,255,.6)">// PUBLIC ROOMS</span>
         <button class="sb-add" onclick="openMod('pubmod')" title="Browse/Create Rooms" style="border-color:rgba(0,245,255,.3);color:var(--cyn)">⊕</button>
@@ -172,7 +180,7 @@
           </div>
         </div>
         <div class="msgs" id="msgs"></div>
-        <div id="send-err"></div>
+        <div id="send-err" style="display:none;padding:4px 14px;font-size:9px;color:var(--red);letter-spacing:1px;background:rgba(255,42,42,.06);border-top:1px solid rgba(255,42,42,.15)"></div>
         <div class="inarea">
           <div class="inrow">
             <span style="color:var(--gd);font-size:11px">►</span>
@@ -193,20 +201,20 @@
           </div>
         </div>
       </div>
-    </div><!-- end carea -->
-    </div><!-- end chat-body -->
-  <!-- GHO RATE TICKER (inside chat-page, below chat-body, never overlaps) -->
-  <div id="gho-ticker" style="display:none;background:rgba(0,8,0,.97);border-top:1px solid rgba(255,215,0,.12);padding:3px 18px;font-size:9px;color:var(--gdim);align-items:center;gap:16px;letter-spacing:1px;flex-shrink:0">
-    <span style="color:var(--gold)">◈ GHOST_CASH</span>
-    <span>100 GHO = $1.00 USD</span>
-    <span style="color:rgba(0,212,255,.4)">|</span>
-    <span>1 GHO = $0.01 USD</span>
-    <span style="color:rgba(0,212,255,.4)">|</span>
-    <span style="color:var(--gd)">SIMULATED EXCHANGE RATE</span>
-  </div>
+    </div>
+    </div>
+    <!-- GHO TICKER -->
+    <div id="gho-ticker" style="display:none;background:rgba(0,8,0,.97);border-top:1px solid rgba(255,215,0,.12);padding:3px 18px;font-size:9px;color:var(--gdim);align-items:center;gap:16px;letter-spacing:1px;flex-shrink:0">
+      <span style="color:var(--gold)">◈ GHOST_CASH</span>
+      <span>100 GHO = $1.00 USD</span>
+      <span style="color:rgba(0,212,255,.4)">|</span>
+      <span>1 GHO = $0.01 USD</span>
+      <span style="color:rgba(0,212,255,.4)">|</span>
+      <span style="color:var(--gd)">SIMULATED EXCHANGE RATE</span>
+    </div>
   </div><!-- end chat-page -->
 
-<!-- SUCCESS FLASH -->
+<!-- NEW DM MODAL -->
 <div class="mov" id="ncmod">
   <div class="modal">
     <div class="mtit"><span>// NEW DM CHANNEL</span><button class="mcl" onclick="closeMod('ncmod')">✕</button></div>
@@ -306,7 +314,6 @@
         <button class="mcl" onclick="closeMod('walmod')">✕</button>
       </div>
     </div>
-    <!-- hero -->
     <div class="whero" style="flex-shrink:0">
       <div class="wblbl">AVAILABLE BALANCE</div>
       <div class="wbig"><span>◈</span><span id="wbigbal">0.00</span></div>
@@ -314,29 +321,22 @@
       <div style="font-size:9px;color:rgba(255,215,0,.35);margin-top:5px">100 GHO = $1.00 USD &nbsp;·&nbsp; 1 GHO = $0.01 USD</div>
       <div class="waddr" id="waddr">ADDR: ——</div>
     </div>
-    <!-- stats -->
     <div class="wstats" style="flex-shrink:0">
       <div class="wstat"><div class="wsv" id="wssent">0.00</div><div class="wsl">SENT</div></div>
       <div class="wstat"><div class="wsv" id="wsrecv">0.00</div><div class="wsl">RECEIVED</div></div>
       <div class="wstat"><div class="wsv" id="wstxc">0</div><div class="wsl">TXS</div></div>
     </div>
-    <!-- tab buttons -->
     <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
       <button id="wtbtn-history" onclick="switchWalTab('history')" style="flex:1;padding:9px;background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;margin-bottom:-1px;transition:all .2s">TX HISTORY</button>
       <button id="wtbtn-exchange" onclick="switchWalTab('exchange')" style="flex:1;padding:9px;background:none;border:none;border-bottom:2px solid transparent;color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:2px;margin-bottom:-1px;transition:all .2s">EXCHANGE</button>
     </div>
-    <!-- history tab -->
     <div id="wtab-history" style="overflow-y:auto;flex:1">
       <div class="txlist" id="txlist"></div>
     </div>
-    <!-- exchange tab -->
     <div id="wtab-exchange" style="display:none;padding:36px 24px;text-align:center;flex:1">
       <div style="font-family:'VT323',monospace;font-size:64px;color:rgba(255,215,0,.3);line-height:1;margin-bottom:16px">◈⇄$</div>
       <div style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--gold);letter-spacing:4px;margin-bottom:12px;text-shadow:0 0 12px rgba(255,215,0,.4)">COMING SOON</div>
-      <div style="font-size:11px;color:var(--gd);line-height:2;max-width:300px;margin:0 auto">
-        Real money exchange is under development.<br>
-        Convert GHO ↔ USD when it launches.
-      </div>
+      <div style="font-size:11px;color:var(--gd);line-height:2;max-width:300px;margin:0 auto">Real money exchange is under development.<br>Convert GHO ↔ USD when it launches.</div>
       <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:300px;margin-left:auto;margin-right:auto">
         <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">GHO → USD<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
         <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">USD → GHO<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
@@ -344,6 +344,14 @@
         <div style="border:1px dashed rgba(255,215,0,.15);padding:14px 8px;font-size:9px;color:rgba(255,215,0,.25);letter-spacing:1px">DEPOSIT<br><span style="font-size:8px;opacity:.5">LOCKED</span></div>
       </div>
       <div style="margin-top:20px;font-size:9px;color:rgba(255,215,0,.3);letter-spacing:1px">CURRENT RATE: 100 GHO = $1.00 USD</div>
+    </div>
+    <!-- Danger zone: delete account -->
+    <div style="padding:10px 16px;border-top:1px solid rgba(255,42,42,.15);flex-shrink:0;background:rgba(255,42,42,.03)">
+      <button onclick="openDeleteAccountModal()" style="width:100%;padding:7px;background:none;border:1px solid rgba(255,42,42,.25);color:rgba(255,42,42,.5);font-family:'Share Tech Mono',monospace;font-size:9px;cursor:pointer;letter-spacing:2px;transition:all .2s"
+        onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+        onmouseout="this.style.borderColor='rgba(255,42,42,.25)';this.style.color='rgba(255,42,42,.5)'">
+        ⚠ DELETE ACCOUNT
+      </button>
     </div>
   </div>
 </div>
@@ -368,7 +376,6 @@
   <div class="modal" style="width:400px">
     <div class="mtit" id="prof-title"><span>// USER PROFILE</span><button class="mcl" onclick="closeMod('profmod')">✕</button></div>
     <div style="padding:22px 20px 0">
-      <!-- avatar + name row -->
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
         <div id="prof-av" style="width:54px;height:54px;border:1px solid var(--border);background:var(--gk);display:flex;align-items:center;justify-content:center;font-family:'VT323',monospace;font-size:32px;color:var(--g);flex-shrink:0"></div>
         <div>
@@ -380,12 +387,10 @@
           <div id="prof-addr" style="font-size:9px;color:var(--gd);margin-top:2px;opacity:.5"></div>
         </div>
       </div>
-      <!-- bio -->
       <div style="border:1px solid var(--border);background:rgba(0,20,0,.3);padding:12px 14px;margin-bottom:14px;min-height:52px">
         <div style="font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:6px">// BIO</div>
         <div id="prof-bio" style="font-size:12px;color:var(--wht);line-height:1.6"></div>
       </div>
-      <!-- stats row -->
       <div style="display:flex;border:1px solid var(--border);margin-bottom:14px">
         <div style="flex:1;padding:10px;text-align:center;border-right:1px solid var(--border)">
           <div id="prof-bal" style="font-family:'Orbitron',sans-serif;font-size:15px;color:var(--gold);font-weight:700"></div>
@@ -400,11 +405,10 @@
           <div style="font-size:8px;color:var(--gd);margin-top:2px;letter-spacing:1px">TRANSACTIONS</div>
         </div>
       </div>
-      <!-- own profile edit bio -->
+      <!-- own profile edit -->
       <div id="prof-edit-section" style="display:none;margin-bottom:16px">
         <div style="font-size:9px;color:var(--gd);letter-spacing:2px;margin-bottom:6px">// EDIT YOUR BIO</div>
         <input class="ti" id="prof-bio-input" type="text" placeholder="update your bio..." maxlength="100" style="font-size:11px">
-        <!-- hide balance toggle -->
         <div style="margin-top:10px;padding:10px 12px;border:1px solid var(--border);background:rgba(0,20,0,.2);display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:10px;color:var(--wht);letter-spacing:1px">Hide GHO balance on profile</div>
@@ -415,10 +419,13 @@
         <button class="tb2" onclick="saveBio()" style="margin-top:9px;font-size:10px;padding:7px;letter-spacing:2px">SAVE CHANGES</button>
         <div class="terr" id="prof-err" style="font-size:10px"></div>
       </div>
-      <!-- dm button for other users -->
+      <!-- other user actions -->
       <div id="prof-dm-section" style="display:none;margin-bottom:16px">
         <button class="tb2" id="prof-dm-btn" onclick="dmFromProfile()" style="font-size:10px;padding:8px;letter-spacing:2px">► OPEN DM CHANNEL</button>
-        <button id="prof-block-btn" onclick="toggleBlockProfile()" style="width:100%;margin-top:6px;padding:7px;background:rgba(255,42,42,.06);border:1px solid #3a0000;color:#ff6666;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">BLOCK USER</button>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button id="prof-block-btn" onclick="toggleBlockProfile()" style="flex:1;padding:7px;background:rgba(255,42,42,.06);border:1px solid #3a0000;color:#ff6666;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">BLOCK USER</button>
+          <button id="prof-report-btn" onclick="closeMod('profmod');reportUserModal(profTarget)" style="flex:1;padding:7px;background:rgba(255,100,0,.06);border:1px solid rgba(255,100,0,.3);color:rgba(255,140,0,.8);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">REPORT</button>
+        </div>
       </div>
     </div>
   </div>
@@ -438,15 +445,19 @@
   </div>
 </div>
 
+</div><!-- end app -->
+
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
 <!-- App — load order matters -->
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/firebase.js"></script>
+<script src="js/security.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/chat.js"></script>

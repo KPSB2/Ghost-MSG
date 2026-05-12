@@ -1,13 +1,27 @@
 async function sendMsg(){
   if(!CC)return;
-  if(!rateCheck('msg')){const i2=document.getElementById('minput');const op=i2.placeholder;i2.placeholder='// SLOW DOWN...';setTimeout(()=>i2.placeholder=op,1500);return;}
+  // Use security.js RATE if available, fallback to legacy rateCheck
+  if(window.RATE){
+    const rl=window.RATE.msg();
+    if(!rl.ok){
+      const i2=document.getElementById('minput');const op=i2.placeholder;
+      i2.placeholder='// SLOW DOWN...';
+      setTimeout(()=>i2.placeholder=op,Math.max(1500,rl.waitMs));
+      return;
+    }
+  } else if(!rateCheck('msg')){
+    const i2=document.getElementById('minput');const op=i2.placeholder;
+    i2.placeholder='// SLOW DOWN...';setTimeout(()=>i2.placeholder=op,1500);return;
+  }
   const inp=document.getElementById('minput');
-  const text=inp.value.trim();
+  const rawText=inp.value.trim();
+  if(!rawText)return;
+  if(rawText.length>2000){alert('Max 2000 chars');return;}
+  // Sanitize via security.js if available, otherwise basic trim
+  const text=window.SEC?window.SEC.sanitize(rawText,2000):rawText;
   if(!text)return;
-  if(text.length>2000){alert('Max 2000 chars');return;}
   inp.value='';document.getElementById('cctr').textContent='0 chars';
 
-  // get sender role if group
   let senderRole='';
   if(CC.type==='group'){
     const path=fbOK?await fbGet('groups/'+CC.id+'/members/'+CU.id):ldb().groups?.[CC.id]?.members?.[CU.id];
@@ -32,13 +46,12 @@ async function sendMsg(){
   if(fbOK&&!CU?.isGuest){
     try{await fbPush(path,msg);}
     catch(e){
-      inp.value=text;document.getElementById('cctr').textContent=text.length+' chars';
+      inp.value=rawText;document.getElementById('cctr').textContent=rawText.length+' chars';
       const eb=document.getElementById('send-err');
       if(eb){eb.textContent='⚠ Send failed — check connection';eb.style.display='block';setTimeout(()=>eb.style.display='none',3000);}
       return;
     }
-  }
-  else{
+  } else {
     const d=ldb();
     const base=CC.type==='dm'?d.dms:d.groups;
     if(!base[CC.id])base[CC.id]={messages:{}};
@@ -60,16 +73,13 @@ function toggleTimer(){
 function clearChat(){
   if(!CC)return;
   if(CC.type==='dm'){
-    // simple 2-click confirm for DMs
     openClearConfirmDM();
   } else {
-    // group: requires all members to vote
     openClearConfirmGroup();
   }
 }
 
 function openClearConfirmDM(){
-  // show vote status first (async load)
   document.getElementById('clr-title').textContent='CLEAR DM — MUTUAL VOTE';
   document.getElementById('clr-body').innerHTML=`<div style="font-size:11px;color:var(--gd);text-align:center;padding:20px">LOADING...</div>`;
   openMod('clr-ov');
@@ -140,24 +150,17 @@ async function voteClearDM(){
   closeMod('clr-ov');
 }
 
-async function execClearDM(){/* legacy – unused */}
-
 async function openClearConfirmGroup(){
-  // get current member list
   let gData;
   if(fbOK){gData=await fbGet('groups/'+CC.id);}
   else{gData=ldb().groups?.[CC.id];}
   if(!gData)return;
   const members=Object.keys(gData.members||{});
   const totalNeeded=members.length;
-
-  // check existing votes
   let votes={};
   if(fbOK){const v=await fbGet('groups/'+CC.id+'/clearVotes');votes=v||{};}
   const alreadyVoted=!!votes[CU.id];
   const voteCount=Object.keys(votes).length;
-
-  const ov=document.getElementById('clr-ov');
   document.getElementById('clr-title').textContent='CLEAR CHANNEL VOTE';
   document.getElementById('clr-body').innerHTML=`
     <div style="font-size:11px;color:var(--wht);line-height:1.8;margin-bottom:12px">
@@ -185,14 +188,12 @@ async function voteClear(totalNeeded){
   if(!CC||CC.type!=='group')return;
   const votePath='groups/'+CC.id+'/clearVotes/'+CU.id;
   if(fbOK){
-    await fbSet(votePath, {ts:ts()});
+    await fbSet(votePath,{ts:ts()});
     const votes=await fbGet('groups/'+CC.id+'/clearVotes');
     const voteCount=votes?Object.keys(votes).length:0;
     if(voteCount>=totalNeeded){
-      // all voted — clear messages AND reset votes
       await authReady();await db.ref('groups/'+CC.id+'/messages').remove();
       await db.ref('groups/'+CC.id+'/clearVotes').remove();
-      // post system message
       await fbPush('groups/'+CC.id+'/messages',{type:'sys',text:'Chat was cleared by unanimous vote.',ts:ts()});
     }
   } else {
@@ -209,6 +210,7 @@ async function voteClear(totalNeeded){
   }
   closeMod('clr-ov');
 }
+
 function closeChat(){
   if(CC&&msgListeners[CC.id]){msgListeners[CC.id]();delete msgListeners[CC.id];}
   CC=null;
@@ -229,8 +231,9 @@ async function doNC(){
   const u=uPart.trim().toLowerCase();
   const tag=tagPart.trim().toUpperCase();
   if(!u||!tag){errEl.textContent='Both username and tag are required';return;}
+  // Validate username format
+  if(!/^[a-z0-9_]{2,20}$/.test(u)){errEl.textContent='Invalid username format';return;}
   if(u===CU.id){errEl.textContent='Cannot message yourself';return;}
-  // verify user exists AND tag matches
   let userData=null;
   if(fbOK){userData=await getPublicProfileByUsername(u);}
   else{const d=ldb();userData=d.users[u]||null;}
@@ -246,16 +249,24 @@ async function doNC(){
 // ── CREATE GROUP ──────────────────────────────────────────────
 async function doCreateGroup(){
   if(CU&&CU.isGuest&&document.querySelectorAll('#grp-list .ci').length>=2){SFX.guestLimit();document.getElementById('gcerr').textContent='GUEST LIMIT: max 2 groups';return;}
+  // Rate limit group creation
+  if(window.RATE){const rl=window.RATE.create();if(!rl.ok){document.getElementById('gcerr').textContent=`Slow down — wait ${Math.ceil(rl.waitMs/1000)}s`;return;}}
   const name=document.getElementById('gname').value.trim().replace(/\s+/g,'_').toLowerCase();
-  const desc=document.getElementById('gdesc').value.trim();
+  const desc=document.getElementById('gdesc').value.trim().slice(0,200);
   const inviteRaw=document.getElementById('ginvite').value;
   const errEl=document.getElementById('gcerr');
   if(!name){errEl.textContent='Group name required';return;}
-  if(name.length<2){errEl.textContent='Name min 2 chars';return;}
+  if(name.length<2||name.length>40){errEl.textContent='Name must be 2–40 chars';return;}
+  if(!/^[a-z0-9_]+$/.test(name)){errEl.textContent='Name: letters, numbers and _ only';return;}
 
-  const invites=inviteRaw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  // Sanitize invite list — only valid usernames
+  const invites=inviteRaw.split(',')
+    .map(s=>s.trim().toLowerCase())
+    .filter(s=>s&&/^[a-z0-9_]{2,20}$/.test(s)&&s!==CU.id)
+    .slice(0,50); // max 50 initial members
+
   const members={[CU.id]:{role:'ADMIN',joined:ts()}};
-  invites.forEach(u=>{if(u&&u!==CU.id)members[u]={role:'MEMBER',joined:ts()};});
+  invites.forEach(u=>{members[u]={role:'MEMBER',joined:ts()};});
 
   const gData={name,desc,owner:CU.id,created:ts(),members};
   let gKey;
