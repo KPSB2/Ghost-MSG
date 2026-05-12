@@ -69,14 +69,16 @@ async function renderPubRoomList(){
   var all=await fbGet('pubrooms');
   list.innerHTML='';if(!all)return;
   Object.entries(all).forEach(function(entry){
-    var k=entry[0],v=entry[1];if(!v||!v.name)return;
+    var k=entry[0],v=entry[1];
+    var info=v&&v.info?v.info:v;
+    if(!info||!info.name)return;
     var msgs=v.messages?Object.values(v.messages):[];
     var last=msgs.sort(function(a,b){return b.ts-a.ts;})[0];
     var prev=last&&last.text?last.text.slice(0,22):'no messages';
     var item=document.createElement('div');
     item.className='ci'+(CC&&CC.id===k?' active':'');
-    item.onclick=(function(kk,vv){return function(){openPubRoom(kk,vv);};})(k,v);
-    item.innerHTML='<div class="ci-av group" style="background:rgba(0,245,255,.08);color:var(--cyn);border-color:rgba(0,245,255,.25)">☰</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">#'+esc(v.name)+'</div><div class="ci-prev">'+esc(prev)+'</div></div>';
+    item.onclick=(function(kk,ii){return function(){openPubRoom(kk,ii);};})(k,info);
+    item.innerHTML='<div class="ci-av group" style="background:rgba(0,245,255,.08);color:var(--cyn);border-color:rgba(0,245,255,.25)">☰</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">#'+esc(info.name)+'</div><div class="ci-prev">'+esc(prev)+'</div></div>';
     list.appendChild(item);
   });
 }
@@ -89,9 +91,13 @@ async function renderPubRoomModal(){
   list.innerHTML='<div style="padding:12px 16px;font-size:9px;color:var(--gd)">Loading...</div>';
   var all=await fbGet('pubrooms');
   if(!all){list.innerHTML='<div style="padding:16px;font-size:10px;color:var(--gd)">No public rooms yet.</div>';return;}
-  list.innerHTML=Object.entries(all).filter(function(e){return e[1]&&e[1].name;}).map(function(e){
-    var k=e[0],v=e[1],members=v.joined?Object.keys(v.joined).length:0,count=v.messages?Object.keys(v.messages).length:0;
-    return '<div class="ci" style="padding:10px 16px" onclick="(function(){openPubRoom(\''+esc(k)+'\',{name:\''+esc(v.name)+'\',desc:\''+esc(v.desc||'')+'\'}); closeMod(\'pubmod\');})()"><div class="ci-av group" style="background:rgba(0,245,255,.08);color:var(--cyn);border-color:rgba(0,245,255,.25)">☰</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">#'+esc(v.name)+'</div><div class="ci-prev">'+esc(v.desc||'')+' &middot; '+members+' joined &middot; '+count+' msgs</div></div></div>';
+  list.innerHTML=Object.entries(all).filter(function(e){
+    var info=e[1]&&e[1].info?e[1].info:e[1];return info&&info.name;
+  }).map(function(e){
+    var k=e[0],v=e[1],info=v.info?v.info:v;
+    var members=v.joined?Object.keys(v.joined).length:0;
+    var count=v.messages?Object.keys(v.messages).length:0;
+    return '<div class="ci" style="padding:10px 16px" onclick="(function(){openPubRoom(\''+esc(k)+'\',{name:\''+esc(info.name)+'\',desc:\''+esc(info.desc||'')+'\'}); closeMod(\'pubmod\');})()"><div class="ci-av group" style="background:rgba(0,245,255,.08);color:var(--cyn);border-color:rgba(0,245,255,.25)">☰</div><div class="ci-info"><div class="ci-name" style="color:var(--cyn)">#'+esc(info.name)+'</div><div class="ci-prev">'+esc(info.desc||'')+' &middot; '+members+' joined &middot; '+count+' msgs</div></div></div>';
   }).join('');
 }
 async function doCreatePubRoom(){
@@ -123,22 +129,21 @@ async function doCreatePubRoom(){
   };
   await fbSet('pubrooms/'+name+'/info',room);
   if(!CU.isGuest){
-    await fbSet(
-      'pubrooms/'+name+'/joined/'+CU.id,
-      {ts:Date.now()}
-    );
+    await fbSet('pubrooms/'+name+'/joined/'+CU.id,{ts:Date.now()});
   }
   closeMod('pubmod');
-  openPubRoom(name,{info:room});
+  openPubRoom(name,room);
   renderPubRoomList();
 }
 function openPubRoom(key,rdata){
   if(CC&&msgListeners[CC.id]){msgListeners[CC.id]();delete msgListeners[CC.id];}
-  CC={id:key,type:'pubroom',name:rdata.name||key,data:rdata};
+  var info=rdata&&rdata.info?rdata.info:rdata;
+  var roomName=info&&info.name?info.name:key;
+  CC={id:key,type:'pubroom',name:roomName,data:info};
   document.getElementById('empty').style.display='none';
   document.getElementById('achat').style.display='flex';
   var av=document.getElementById('chav');av.textContent='☰';av.className='chav group';av.style.color='var(--cyn)';
-  document.getElementById('chn').textContent='#'+(rdata.name||key).toUpperCase()+' [PUBLIC]';
+  document.getElementById('chn').textContent='#'+roomName.toUpperCase()+' [PUBLIC]';
   document.getElementById('chs').innerHTML='<span class="sdot" style="width:5px;height:5px;background:var(--cyn);box-shadow:0 0 4px var(--cyn)"></span> PUBLIC ROOM // OPEN TO ALL';
   document.getElementById('mbr-btn').style.display='none';
   document.getElementById('pay-btn').style.display='none';
