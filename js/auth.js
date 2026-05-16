@@ -3,19 +3,24 @@ async function tryRestoreSession(firebaseUser){
   try{
     if(fbOK && firebaseUser){
       const uid=firebaseUser.uid;
-      const pub=await fbGet('users/'+uid+'/public');
+      // Use db.ref directly — _authUnlock was just called so auth token is ready
+      const pubSnap=await db.ref('users/'+uid+'/public').get();
+      const pub=pubSnap.exists()?pubSnap.val():null;
       if(!pub){
         console.warn('[SESSION] No profile for uid',uid);
         const lerr=document.getElementById('lerr');
         if(lerr&&!document.getElementById('chat-page').classList.contains('active'))
-          lerr.textContent='Profile not found. Please register.';
+          lerr.textContent='Profile not found — please register.';
+        setBtnLoading('login-btn',false,'ACCESS CHANNEL');
         if(auth)auth.signOut();
         return;
       }
-      const priv=await fbGet('users/'+uid+'/private');
+      const privSnap=await db.ref('users/'+uid+'/private').get();
+      const priv=privSnap.exists()?privSnap.val():null;
       const username=pub.username;
       if(!username){
-        console.warn('[SESSION] Profile missing username field');
+        console.warn('[SESSION] Profile missing username');
+        setBtnLoading('login-btn',false,'ACCESS CHANNEL');
         if(auth)auth.signOut();
         return;
       }
@@ -159,12 +164,12 @@ async function doLogin(){
   setBtnLoading('login-btn',true,'ACCESS CHANNEL');
   try{
     if(fbOK){
-      const cred=await Promise.race([
+      await Promise.race([
         auth.signInWithEmailAndPassword(ghostEmail(u),p),
         new Promise((_,rej)=>setTimeout(()=>rej({code:'auth/timeout',message:'Request timed out. Make sure the app is served over HTTPS.'}),10000))
       ]);
-      // onAuthStateChanged may not re-fire if already signed in — call directly
-      if(cred&&cred.user&&!CU) await tryRestoreSession(cred.user);
+      // onAuthStateChanged will fire and call tryRestoreSession
+      // Button stays loading until enterApp() resets it
     } else {
       const d=ldb(); const userData=d.users[u]||null;
       if(!userData){errEl.textContent='Identity not found on network';return;}
