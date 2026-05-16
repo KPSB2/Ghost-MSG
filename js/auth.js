@@ -4,10 +4,21 @@ async function tryRestoreSession(firebaseUser){
     if(fbOK && firebaseUser){
       const uid=firebaseUser.uid;
       const pub=await fbGet('users/'+uid+'/public');
-      if(!pub){console.warn('[SESSION] No profile for uid',uid);return;}
+      if(!pub){
+        console.warn('[SESSION] No profile for uid',uid);
+        const lerr=document.getElementById('lerr');
+        if(lerr&&!document.getElementById('chat-page').classList.contains('active'))
+          lerr.textContent='Profile not found. Please register.';
+        if(auth)auth.signOut();
+        return;
+      }
       const priv=await fbGet('users/'+uid+'/private');
       const username=pub.username;
-      if(!username){console.warn('[SESSION] Profile missing username field');return;}
+      if(!username){
+        console.warn('[SESSION] Profile missing username field');
+        if(auth)auth.signOut();
+        return;
+      }
       enterApp({id:username,uid,...pub,...(priv||{})});
     } else if(!fbOK){
       const raw=localStorage.getItem('gm_session');
@@ -19,7 +30,13 @@ async function tryRestoreSession(firebaseUser){
       if(!userData){localStorage.removeItem('gm_session');return;}
       enterApp({id:sess.id,uid:sess.id,...userData});
     }
-  }catch(e){console.warn('Session restore failed:',e);}
+  }catch(e){
+    console.warn('Session restore failed:',e);
+    const lerr=document.getElementById('lerr');
+    if(lerr&&!document.getElementById('chat-page').classList.contains('active'))
+      lerr.textContent='Login error: '+(e.message||'Unknown error');
+    setBtnLoading('login-btn',false,'ACCESS CHANNEL');
+  }
 }
 
 let CU=null;
@@ -142,10 +159,12 @@ async function doLogin(){
   setBtnLoading('login-btn',true,'ACCESS CHANNEL');
   try{
     if(fbOK){
-      await Promise.race([
+      const cred=await Promise.race([
         auth.signInWithEmailAndPassword(ghostEmail(u),p),
-        new Promise((_,rej)=>setTimeout(()=>rej({code:'auth/timeout',message:'Request timed out. Make sure the app is served over HTTPS, not opened directly from storage.'}),10000))
+        new Promise((_,rej)=>setTimeout(()=>rej({code:'auth/timeout',message:'Request timed out. Make sure the app is served over HTTPS.'}),10000))
       ]);
+      // onAuthStateChanged may not re-fire if already signed in — call directly
+      if(cred&&cred.user&&!CU) await tryRestoreSession(cred.user);
     } else {
       const d=ldb(); const userData=d.users[u]||null;
       if(!userData){errEl.textContent='Identity not found on network';return;}
@@ -167,7 +186,7 @@ async function doLogin(){
       errEl.textContent='Error: '+(e.message||'Unknown error');
     }
   }finally{
-    setBtnLoading('login-btn',false,'ACCESS CHANNEL');
+    if(!CU) setBtnLoading('login-btn',false,'ACCESS CHANNEL');
   }
 }
 
@@ -258,6 +277,8 @@ function doGuest(){
 function enterApp(user){
   CU=user;
   SFX.login();
+  setBtnLoading('login-btn',false,'ACCESS CHANNEL');
+  setBtnLoading('reg-btn',false,'CREATE GHOST IDENTITY');
   document.getElementById('auth-page').classList.remove('active');
   document.getElementById('chat-page').classList.add('active');
   document.getElementById('tbar-auth').style.display='none';
